@@ -4,7 +4,10 @@
 # Simple tool to quickly setup new VPS servers to deploy your code.
 # https://github.com/diogocasado/coderaft
 #
+# This is the default project being cloned by coderaft and is meant to be an example
+#
 SERVICE="dummy"
-DESCRIPTION="This is dummy project written in Node.js to showcase Coderaft."
+DESCRIPTION="This is a dummy project for Coderaft."
 LOCATION="/"
 PROXY_PASS="http://unix:/run/dummy.sock"
+#START=Should be guessed by coderaft
