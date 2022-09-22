@@ -2,33 +2,35 @@ const OS = require('node:os');
 const Fs = require('node:fs');
 const asyncFs = Fs.promises;
 const Path = require('node:path');
+const Net = require('node:net');
 const Http = require('node:http');
 const Config = require('./config');
 
 const promisify = require('node:util').promisify;
 const execFile = promisify(require('node:child_process').execFile);
 
-const dummy = {
+const Dummy = {
 	config: Config.build(),
 	stats: {
 		pageloads: 0
-	}
+	},
+	run: {}
 };
 
 const Stats = [
 	{
 		id: 'pageloads',
 		description: 'Page loads',
-		value: () => dummy.stats.pageloads
+		value: () => Dummy.stats.pageloads
 	}
 ]
 
 async function setupUnixSocket () {
 
 	try {
-		let stats = await asyncFs.stat(dummy.config.http.path);
+		let stats = await asyncFs.stat(Dummy.config.http.path);
 		if (!stats.isSocket())
-			throw "Error: Cannot use http socket at " + dummy.config.http.path;
+			throw "Error: Cannot use http socket at " + Dummy.config.http.path;
 	
 	} catch (error) {
 
@@ -38,52 +40,52 @@ async function setupUnixSocket () {
 		throw error;
 	}
 
-	await asyncFs.unlink(dummy.config.http.path);
+	await asyncFs.unlink(Dummy.config.http.path);
 }
 
 async function chownUnixSocket () {
-	const idu = await execFile('id', ['-u', dummy.config.run.user]);
-	const idg = await execFile('id', ['-g', dummy.config.run.group]);
+	const idu = await execFile('id', ['-u', Dummy.config.run.user]);
+	const idg = await execFile('id', ['-g', Dummy.config.run.group]);
 
 	const ueid = +idu.stdout;
 	const geid = +idg.stdout;
 
-	await asyncFs.chown(dummy.config.http.path, ueid, geid);
+	await asyncFs.chown(Dummy.config.http.path, ueid, geid);
 }
 
 async function startHttpServer () {
 	
-	if (dummy.config.flags.is_sock)
+	if (Dummy.config.flags.is_sock)
 		await setupUnixSocket();
 
-	dummy.server = Http.createServer(handleRequest);
-	dummy.server.on('error', handleError);
-	dummy.server.on('listening', handleListen);
-	dummy.server.listen(dummy.config.http);
+	Dummy.server = Http.createServer(handleRequest);
+	Dummy.server.on('error', handleError);
+	Dummy.server.on('listening', handleListen);
+	Dummy.server.listen(Dummy.config.http);
 
-	if (dummy.config.flags.is_sock)
+	if (Dummy.config.flags.is_sock)
 		await chownUnixSocket();
 }
 
 async function setguidProcess () {
 
-	process.setegid(dummy.config.run.group);
-	process.seteuid(dummy.config.run.user);
+	process.setegid(Dummy.config.run.group);
+	process.seteuid(Dummy.config.run.user);
 
 	console.log('Running as ' +
-			`${dummy.config.run.user},${process.geteuid()}:` +
-			`${dummy.config.run.group},${process.getegid()}`);
+			`${Dummy.config.run.user},${process.geteuid()}:` +
+			`${Dummy.config.run.group},${process.getegid()}`);
 }
 
 function handleListen () {
 	let bindStr = 'http://';
-	if (dummy.config.flags.is_inet)
+	if (Dummy.config.flags.is_inet)
 		bindStr +=
-			dummy.config.http.host + ':' +
-			dummy.config.http.port;
-	else if (dummy.config.flags.is_sock)
+			Dummy.config.http.host + ':' +
+			Dummy.config.http.port;
+	else if (Dummy.config.flags.is_sock)
 		bindStr +=
-			'unix:' + dummy.config.http.path;
+			'unix:' + Dummy.config.http.path;
 	console.log('Listening on: ' + bindStr);
 }
 
@@ -119,31 +121,36 @@ function serveFileAsync (path, response) {
 }
 
 function updateStats (request, response) {
-	dummy.stats.pageloads++;
+	Dummy.stats.pageloads++;
 }
 
-function publishStats () {
-	dummy.lastUpdate = Date.now();
+function sendStats () {
 
-	const paddle = {
+	const request = {
+		serviceName: Dummy.config.run.name,
 		stats: []
 	};
 
 	for (let stat of Stats) {
-		paddle.stats.push({
+		request.stats.push({
+			id: stat.id,
 			description: stat.description,
 			value: stat.value()
 		});
 	}
 
-	const out = JSON.stringify(paddle);
-
-	Fs.writeFileSync(dummy.config.run.paddle, out);
+	const paddle = Net.createConnection(Dummy.config.run.paddleSock, () => {
+		const message = JSON.stringify(request);
+		console.log('Send Stats: ' + message);
+		paddle.end(message);
+	});
 }
 
 Promise.resolve({})
 	.then(startHttpServer)
 	.then(setguidProcess);
 
-//setInterval(publishStats, dummy.config.updateInterval);
+Dummy.run.statsInterval = setInterval(
+	sendStats,
+	Dummy.config.run.updateInterval);
 

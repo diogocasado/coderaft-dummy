@@ -2,9 +2,10 @@ exports.build = build;
 
 const Defaults = {
 	run: {
+		name: 'dummy',
 		user: 'www-data',
 		group:  'www-data',
-		paddle: '/var/dummy.paddle',
+		paddleSock: '/run/paddle.sock',
 		updateInterval: 5000
 	},
 	http: {
