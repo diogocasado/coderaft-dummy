@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Coderaft dummy server</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inconsolata&display=swap" rel="stylesheet">
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      width: 100%;
+      font-family: "Helvetica Neue", Helvetica, Arial, Sans-Serif;
+      line-height: 1;
+      overflow: hidden;
+    }
+    h1, h2 {
+      margin: 0;
+      padding: 0;
+    }
+    h1 {
+     font-size: 5em;
+     color: white;
+     opacity: 0.5;
+    }
+    a {
+      text-decoration: none;
+    }
+    .sky {
+      background: linear-gradient(to bottom, #1e528e 0%, #265889 50%, #9da671 100%);
+    }
+    .hero {
+      margin-top: 15vh;
+    }
+    .cloud {
+      position: absolute;
+      bottom: 35%;
+      padding-left: 30%;
+      transition: padding 30s ease-in-out;
+      font-family: 'Inconsolata', monospace;
+      font-size: 24px;
+    } 
+    .raft {
+      position: absolute;
+      bottom: 0;
+      padding-left: 50%;
+      transition: padding 20s ease-in-out;
+      font-family: 'Inconsolata', monospace;
+      font-size: 24px;
+    }
+    </style>
+    <script>
+      const CloudInterval = 30000;
+      const RaftInterval = 20000;
+      setTimeout(moveCloud, 2000);
+      function moveCloud () {
+        const els = document.getElementsByClassName("cloud");
+	els[0].style.paddingLeft = (Math.random() * 100) + '%';
+	setTimeout(moveCloud, CloudInterval);
+      }
+      setTimeout(moveRaft, 1000);
+      function moveRaft () {
+        const els = document.getElementsByClassName("raft");
+	els[0].style.paddingLeft = 0.2 + ((Math.random() * 100) * 0.6) + '%';
+	setTimeout(moveRaft, RaftInterval);
+      }
+   </script>
+</head>
+<body class="sky">
+  <section class="hero">
+    <center>
+      <h1>Coderaft</h1>
+      <h2><a href="https://github.com/diogocasado/coderaft">Github</a></h2>
+    </center>
+  </section>
+  <pre class="cloud">
+	     .-~~~-.
+   .- ~ ~-(       )_ _
+  /                    ~ -.
+ |                          ',
+  \                         .'
+    ~- ._ ,. ,.,.,., ,.. -~
+	    '       '
+  </pre>
+  <pre class="raft">
+       I\\
+       I \\
+       I  \\
+       I*--\\
+       I  x \\
+       I 404 \\
+       I______\\
+ ______I____________
+ \\  \\        \\  \\  ^  ^
+ ^^^^^^^^^^^^^^^^^    ^
+  </pre>
+  <footer>
+  </footer>
+</body>
+</html>

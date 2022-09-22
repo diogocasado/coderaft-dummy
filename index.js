@@ -1,5 +1,7 @@
 const OS = require('node:os');
-const Fs = require('node:fs').promises;
+const Fs = require('node:fs');
+const asyncFs = Fs.promises;
+const Path = require('node:path');
 const Http = require('node:http');
 const Config = require('./config');
 
@@ -7,13 +9,24 @@ const promisify = require('node:util').promisify;
 const execFile = promisify(require('node:child_process').execFile);
 
 const dummy = {
-	config: Config.build()
+	config: Config.build(),
+	stats: {
+		pageloads: 0
+	}
 };
+
+const Stats = [
+	{
+		id: 'pageloads',
+		description: 'Page loads',
+		value: () => dummy.stats.pageloads
+	}
+]
 
 async function setupUnixSocket () {
 
 	try {
-		let stats = await Fs.stat(dummy.config.http.path);
+		let stats = await asyncFs.stat(dummy.config.http.path);
 		if (!stats.isSocket())
 			throw "Error: Cannot use http socket at " + dummy.config.http.path;
 	
@@ -25,7 +38,7 @@ async function setupUnixSocket () {
 		throw error;
 	}
 
-	await Fs.unlink(dummy.config.http.path);
+	await asyncFs.unlink(dummy.config.http.path);
 }
 
 async function chownUnixSocket () {
@@ -35,7 +48,7 @@ async function chownUnixSocket () {
 	const ueid = +idu.stdout;
 	const geid = +idg.stdout;
 
-	await Fs.chown(dummy.config.http.path, ueid, geid);
+	await asyncFs.chown(dummy.config.http.path, ueid, geid);
 }
 
 async function startHttpServer () {
@@ -62,7 +75,6 @@ async function setguidProcess () {
 			`${dummy.config.run.group},${process.getegid()}`);
 }
 
-
 function handleListen () {
 	let bindStr = 'http://';
 	if (dummy.config.flags.is_inet)
@@ -82,18 +94,56 @@ function handleError (error) {
 }
 
 function handleRequest  (request, response) {
-	notifyRequest();
-	console.log('Request: ', request);
-	response.writeHead(200, { 'Content-Type': 'text/plain' });
-	response.end('Hello back');
+    	response.setHeader('Content-Type', 'text/html');
+	serveFileAsync('index.html', response);
+	
+	updateStats(request, response);
 }
 
-function notifyRequest () {
-	if (typeof process.env.REQUESTS === 'undefined')
-		process.env.REQUESTS = 0;
-	process.env.REQUESTS++;
+function serveFileAsync (path, response) {
+    const readStream = Fs.createReadStream(path);
+
+    return new Promise((finish, reject) => {
+        readStream.pipe(response);
+        readStream.on('end', () => {
+            console.log("Read " + path);
+            readStream.close();
+            response.end();
+            finish();
+        });
+        readStream.on('error', (error) => {
+            console.log('Read 404 ' + error.code + ' ' + path);
+            response.writeHead(404).end();
+        });
+    });
+}
+
+function updateStats (request, response) {
+	dummy.stats.pageloads++;
+}
+
+function publishStats () {
+	dummy.lastUpdate = Date.now();
+
+	const paddle = {
+		stats: []
+	};
+
+	for (let stat of Stats) {
+		paddle.stats.push({
+			description: stat.description,
+			value: stat.value()
+		});
+	}
+
+	const out = JSON.stringify(paddle);
+
+	Fs.writeFileSync(dummy.config.run.paddle, out);
 }
 
 Promise.resolve({})
 	.then(startHttpServer)
 	.then(setguidProcess);
+
+//setInterval(publishStats, dummy.config.updateInterval);
+

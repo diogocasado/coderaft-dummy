@@ -10,4 +10,5 @@ SERVICE="dummy"
 DESCRIPTION="This is a dummy project for Coderaft."
 LOCATION="/"
 PROXY_PASS="http://unix:/run/dummy.sock"
+PADDLE_FILE="/run/dummy.paddle"
 #START=Should be guessed by coderaft

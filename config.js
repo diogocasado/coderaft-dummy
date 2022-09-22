@@ -3,7 +3,9 @@ exports.build = build;
 const Defaults = {
 	run: {
 		user: 'www-data',
-		group:  'www-data'
+		group:  'www-data',
+		paddle: '/var/dummy.paddle',
+		updateInterval: 5000
 	},
 	http: {
 		path: '/run/dummy.sock'
