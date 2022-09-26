@@ -5,6 +5,9 @@ const Defaults = {
 		name: 'dummy',
 		user: 'www-data',
 		group:  'www-data',
+		chownmod: {
+			'/index.html': 0644
+		},
 		paddleSock: '/run/paddle.sock',
 		updateInterval: 5000
 	},
