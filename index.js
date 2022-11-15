@@ -195,6 +195,7 @@ function sendStats () {
 		paddle.end(message);
 	});
 	paddle.on('error', (error) => console.log(`[Paddle] ${error}`));
+	paddle.on('end', () => paddle.destroy());
 }
 
 Promise.resolve({})
